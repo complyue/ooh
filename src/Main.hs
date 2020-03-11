@@ -19,6 +19,7 @@ import           HasObject
 
 -- application lib
 
+-- pieces used to assembly object class `C` up
 type C'Ctor'Args = (Int, Text)
 data C'Attrs = C'Attrs {
       xxx :: IORef Int
@@ -30,6 +31,7 @@ data C'Ops = C'Ops {
   }
 type C'Object = Object C'Ctor'Args C'Ops C'Attrs
 
+-- object class `C` assemblied into a concrete value 
 classC :: Class C'Ctor'Args C'Ops C'Attrs
 classC = c
  where
@@ -37,15 +39,16 @@ classC = c
 
   ctorC :: C'Ctor'Args -> IO C'Object
   ctorC (x, y) = do  -- TODO use args to initialize fields
+    u  <- newUnique
     x' <- newIORef x
     y' <- newIORef y
-    return $ Object c $ C'Attrs x' y'
+    return $ Object u c $ C'Attrs x' y'
 
   opGetXXX :: C'Object -> () -> IO Int
-  opGetXXX (Object _ (C'Attrs !x _)) _ = readIORef x
+  opGetXXX (Object _ _ (C'Attrs !x _)) _ = readIORef x
 
   opSetXXX :: C'Object -> Int -> IO ()
-  opSetXXX (Object _ (C'Attrs !x _)) !v = writeIORef x v
+  opSetXXX (Object _ _ (C'Attrs !x _)) !v = writeIORef x v
 
 
 -- application run
@@ -53,7 +56,7 @@ classC = c
 main :: IO ()
 main = do
 
-  !o <- consObject classC (777, "hahah")
+  !o <- classC $^ (777, "hahah")
   putStrLn $ unpack $ "obj created for class: " <> className (objClass o)
 
   rx <- o $. getXXX $ ()
