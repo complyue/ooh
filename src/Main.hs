@@ -20,31 +20,33 @@ import           HasObject
 -- application lib
 
 data C'Ops = C'Ops {
-    getXXX :: (Object C'Ops C'Attrs) -> Args -> IO Value
-    , setXXX :: (Object C'Ops C'Attrs) -> Args -> IO ()
+    getXXX :: C'Object -> () -> IO Int
+    , setXXX :: C'Object -> Int  -> IO ()
   }
 
 data C'Attrs = C'Attrs {
-      xxx :: IORef Value
-    , yyy :: IORef Value
+      xxx :: IORef Int
+    , yyy :: IORef Text
   }
 
-classC :: Class C'Ops C'Attrs
+type C'Object = Object (Int, Text) C'Ops C'Attrs
+
+classC :: Class (Int, Text) C'Ops C'Attrs
 classC = c
  where
   !c = mkClass "C" ctorC $ C'Ops opGetXXX opSetXXX
 
-  ctorC :: Args -> IO (Object C'Ops C'Attrs)
-  ctorC args = do  -- TODO use args to initialize fields
-    x <- newIORef $ IntValue 777
-    y <- newIORef $ StrValue "hhh"
-    return $ Object c $ C'Attrs x y
+  ctorC :: (Int, Text) -> IO C'Object
+  ctorC (x, y) = do  -- TODO use args to initialize fields
+    x' <- newIORef x
+    y' <- newIORef y
+    return $ Object c $ C'Attrs x' y'
 
-  opGetXXX :: (Object C'Ops C'Attrs) -> Args -> IO Value
-  opGetXXX (Object _ (C'Attrs !x _)) !_args = readIORef x
+  opGetXXX :: C'Object -> () -> IO Int
+  opGetXXX (Object _ (C'Attrs !x _)) _ = readIORef x
 
-  opSetXXX :: (Object C'Ops C'Attrs) -> Args -> IO ()
-  opSetXXX (Object _ (C'Attrs !x _)) !_args = writeIORef x $ StrValue "888"
+  opSetXXX :: C'Object -> Int -> IO ()
+  opSetXXX (Object _ (C'Attrs !x _)) !v = writeIORef x v
 
 
 -- application run
@@ -52,15 +54,14 @@ classC = c
 main :: IO ()
 main = do
 
-  !o <- consObject classC
-    $ Map.fromList [("nnn", IntValue 777), ("xxx", StrValue "bingo")]
+  !o <- consObject classC (777, "hahah")
   putStrLn $ unpack $ "obj created for class: " <> className (objClass o)
 
-  rx <- callOp o getXXX Map.empty
+  rx <- callOp o getXXX ()
   putStrLn $ "xxx now is: " <> show rx
 
-  callOp o setXXX Map.empty
+  callOp o setXXX 888
 
-  nx <- callOp o getXXX Map.empty
+  nx <- callOp o getXXX ()
   putStrLn $ "xxx then is: " <> show nx
 
