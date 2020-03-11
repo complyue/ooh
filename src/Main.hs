@@ -19,15 +19,49 @@ import           HasObject
 
 -- application lib
 
+
+-- pieces used to assembly object class `B` up
+type B'Ctor'Args = Int
+data B'Attrs = B'Attrs {
+      numField'B :: !(IORef Int)
+    , strField'B :: !(IORef Text)
+  }
+data B'Ops = B'Ops {
+    getNumB :: B'Object -> () -> IO Int
+    , setNumB :: B'Object -> Int  -> IO ()
+  }
+type B'Object = Object B'Ctor'Args B'Ops B'Attrs
+
+-- object class `B` assemblied into a concrete value 
+classB :: Class B'Ctor'Args B'Ops B'Attrs
+classB = c
+ where
+  !c = mkClass "B" ctor $ B'Ops opGetNum opSetNum
+
+  ctor :: B'Ctor'Args -> IO B'Attrs
+  ctor x = do
+    x' <- newIORef x
+    y' <- newIORef "base str"
+    return $ B'Attrs x' y'
+
+  opGetNum :: B'Object -> () -> IO Int
+  opGetNum (Object _ _ (B'Attrs !x _)) _ = readIORef x
+
+  opSetNum :: B'Object -> Int -> IO ()
+  opSetNum (Object _ _ (B'Attrs !x _)) !v = writeIORef x v
+
+
 -- pieces used to assembly object class `C` up
 type C'Ctor'Args = (Int, Text)
 data C'Attrs = C'Attrs {
-      xxx :: IORef Int
-    , yyy :: IORef Text
+    attrs'C'B :: !B'Attrs
+    , numField'C :: !(IORef Int)
+    , strField'C :: !(IORef Text)
   }
 data C'Ops = C'Ops {
-    getXXX :: C'Object -> () -> IO Int
-    , setXXX :: C'Object -> Int  -> IO ()
+    ops'C'B :: !B'Ops
+    , getNumC :: C'Object -> () -> IO Int
+    , setNumC :: C'Object -> Int  -> IO ()
   }
 type C'Object = Object C'Ctor'Args C'Ops C'Attrs
 
@@ -35,20 +69,20 @@ type C'Object = Object C'Ctor'Args C'Ops C'Attrs
 classC :: Class C'Ctor'Args C'Ops C'Attrs
 classC = c
  where
-  !c = mkClass "C" ctorC $ C'Ops opGetXXX opSetXXX
+  !c = mkClass "C" ctor $ C'Ops (classOps classB) opGetNumC opSetNumC
 
-  ctorC :: C'Ctor'Args -> IO C'Object
-  ctorC (x, y) = do  -- TODO use args to initialize fields
-    u  <- newUnique
-    x' <- newIORef x
-    y' <- newIORef y
-    return $ Object u c $ C'Attrs x' y'
+  ctor :: C'Ctor'Args -> IO C'Attrs
+  ctor (x, y) = do
+    attrs'b <- classCtor classB x
+    x'      <- newIORef x
+    y'      <- newIORef y
+    return $ C'Attrs attrs'b x' y'
 
-  opGetXXX :: C'Object -> () -> IO Int
-  opGetXXX (Object _ _ (C'Attrs !x _)) _ = readIORef x
+  opGetNumC :: C'Object -> () -> IO Int
+  opGetNumC (Object _ _ (C'Attrs _ !x _)) _ = readIORef x
 
-  opSetXXX :: C'Object -> Int -> IO ()
-  opSetXXX (Object _ _ (C'Attrs !x _)) !v = writeIORef x v
+  opSetNumC :: C'Object -> Int -> IO ()
+  opSetNumC (Object _ _ (C'Attrs _ !x _)) !v = writeIORef x v
 
 
 -- application run
@@ -59,11 +93,11 @@ main = do
   !o <- classC $^ (777, "hahah")
   putStrLn $ unpack $ "obj created for class: " <> className (objClass o)
 
-  rx <- o $. getXXX $ ()
-  putStrLn $ "xxx now is: " <> show rx
+  rx <- o $. getNumC $ ()
+  putStrLn $ "num c now is: " <> show rx
 
-  o $. setXXX $ 888
+  o $. setNumC $ 888
 
-  nx <- o $. getXXX $ ()
-  putStrLn $ "xxx then is: " <> show nx
+  nx <- o $. getNumC $ ()
+  putStrLn $ "num c then is: " <> show nx
 

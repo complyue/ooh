@@ -20,7 +20,7 @@ import           Data.HashMap.Strict           as Map
 data Class g o a = Class {
     classId :: !Unique
     , className :: !Text
-    , classCtor :: !(g -> IO (Object g o a))
+    , classCtor :: !(g -> IO a)
     , classOps :: o
   }
 -- TODO derive Eq,Ord,Hashable against classId
@@ -35,13 +35,16 @@ data Object g o a = Object {
 
 
 -- | object class assembler
-mkClass :: Text -> (g -> IO (Object g o a)) -> o -> Class g o a
+mkClass :: Text -> (g -> IO a) -> o -> Class g o a
 mkClass !name !ctor !ops = Class (unsafePerformIO newUnique) name ctor ops
 
 
 -- | object constructor
 consObject :: Class g o a -> g -> IO (Object g o a)
-consObject !c !args = classCtor c args
+consObject !c !args = do
+  u     <- newUnique
+  attrs <- classCtor c args
+  return $ Object u c attrs
 ($^) :: Class g o a -> (g -> IO (Object g o a))
 ($^) = consObject
 
