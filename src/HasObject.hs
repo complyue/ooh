@@ -36,6 +36,9 @@ mkClass !name !ctor !ops = Class (unsafePerformIO newUnique) name ctor ops
 consObject :: Class g o a -> g -> IO (Object g o a)
 consObject !c !args = classCtor c args
 
-callOp :: Object g o a -> (o -> (Object g o a -> p -> IO b)) -> p -> IO b
-callOp !o !op !args = op (classOps $ objClass o) o args
+callMethod :: Object g o a -> (o -> (Object g o a -> p -> IO b)) -> p -> IO b
+callMethod !o !op !args = op (classOps $ objClass o) o args
+
+($.) :: Object g o a -> (o -> (Object g o a -> p -> IO b)) -> (p -> IO b)
+($.) = callMethod
 

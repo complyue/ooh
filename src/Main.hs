@@ -19,24 +19,23 @@ import           HasObject
 
 -- application lib
 
-data C'Ops = C'Ops {
-    getXXX :: C'Object -> () -> IO Int
-    , setXXX :: C'Object -> Int  -> IO ()
-  }
-
+type C'Ctor'Args = (Int, Text)
 data C'Attrs = C'Attrs {
       xxx :: IORef Int
     , yyy :: IORef Text
   }
+data C'Ops = C'Ops {
+    getXXX :: C'Object -> () -> IO Int
+    , setXXX :: C'Object -> Int  -> IO ()
+  }
+type C'Object = Object C'Ctor'Args C'Ops C'Attrs
 
-type C'Object = Object (Int, Text) C'Ops C'Attrs
-
-classC :: Class (Int, Text) C'Ops C'Attrs
+classC :: Class C'Ctor'Args C'Ops C'Attrs
 classC = c
  where
   !c = mkClass "C" ctorC $ C'Ops opGetXXX opSetXXX
 
-  ctorC :: (Int, Text) -> IO C'Object
+  ctorC :: C'Ctor'Args -> IO C'Object
   ctorC (x, y) = do  -- TODO use args to initialize fields
     x' <- newIORef x
     y' <- newIORef y
@@ -57,11 +56,11 @@ main = do
   !o <- consObject classC (777, "hahah")
   putStrLn $ unpack $ "obj created for class: " <> className (objClass o)
 
-  rx <- callOp o getXXX ()
+  rx <- o $. getXXX $ ()
   putStrLn $ "xxx now is: " <> show rx
 
-  callOp o setXXX 888
+  o $. setXXX $ 888
 
-  nx <- callOp o getXXX ()
+  nx <- o $. getXXX $ ()
   putStrLn $ "xxx then is: " <> show nx
 
