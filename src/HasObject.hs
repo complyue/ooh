@@ -49,9 +49,28 @@ consObject !c !args = do
 ($^) = consObject
 
 
--- | object method invoker
-callMethod :: Object g o a -> (o -> (Object g o a -> p -> IO b)) -> p -> IO b
-callMethod !o !op !args = op (classOps $ objClass o) o args
-($.) :: Object g o a -> (o -> (Object g o a -> p -> IO b)) -> (p -> IO b)
+-- | direct method invoker
+callMethod :: Object g o a -> (o -> a -> p -> IO b) -> p -> IO b
+callMethod !o !op !args = op (classOps $ objClass o) (objAttrs o) args
+($.) :: Object g o a -> (o -> a -> p -> IO b) -> (p -> IO b)
 ($.) = callMethod
+
+-- | base method invoker
+callBaseMethod
+  :: Object g o a
+  -> (o' -> a' -> p -> IO b)
+  -> (o -> o')
+  -> (a -> a')
+  -> p
+  -> IO b
+callBaseMethod !o !op !baseOpX !baseAttrX !args =
+  op (baseOpX $ classOps $ objClass o) (baseAttrX $ objAttrs o) args
+($..)
+  :: Object g o a
+  -> (o' -> a' -> p -> IO b)
+  -> (o -> o')
+  -> (a -> a')
+  -> p
+  -> IO b
+($..) = callBaseMethod
 

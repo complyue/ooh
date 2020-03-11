@@ -27,10 +27,9 @@ data B'Attrs = B'Attrs {
     , strField'B :: !(IORef Text)
   }
 data B'Ops = B'Ops {
-    getNumB :: B'Object -> () -> IO Int
-    , setNumB :: B'Object -> Int  -> IO ()
+    getNumB :: B'Attrs -> () -> IO Int
+    , setNumB :: B'Attrs -> Int  -> IO ()
   }
-type B'Object = Object B'Ctor'Args B'Ops B'Attrs
 
 -- object class `B` assemblied into a concrete value 
 classB :: Class B'Ctor'Args B'Ops B'Attrs
@@ -44,11 +43,11 @@ classB = c
     y' <- newIORef "base str"
     return $ B'Attrs x' y'
 
-  opGetNum :: B'Object -> () -> IO Int
-  opGetNum (Object _ _ (B'Attrs !x _)) _ = readIORef x
+  opGetNum :: B'Attrs -> () -> IO Int
+  opGetNum (B'Attrs !x _) _ = readIORef x
 
-  opSetNum :: B'Object -> Int -> IO ()
-  opSetNum (Object _ _ (B'Attrs !x _)) !v = writeIORef x v
+  opSetNum :: B'Attrs -> Int -> IO ()
+  opSetNum (B'Attrs !x _) !v = writeIORef x v
 
 
 -- pieces used to assembly object class `C` up
@@ -60,10 +59,9 @@ data C'Attrs = C'Attrs {
   }
 data C'Ops = C'Ops {
     ops'C'B :: !B'Ops
-    , getNumC :: C'Object -> () -> IO Int
-    , setNumC :: C'Object -> Int  -> IO ()
+    , getNumC :: C'Attrs -> () -> IO Int
+    , setNumC :: C'Attrs -> Int  -> IO ()
   }
-type C'Object = Object C'Ctor'Args C'Ops C'Attrs
 
 -- object class `C` assemblied into a concrete value 
 classC :: Class C'Ctor'Args C'Ops C'Attrs
@@ -78,11 +76,11 @@ classC = c
     y'      <- newIORef y
     return $ C'Attrs attrs'b x' y'
 
-  opGetNumC :: C'Object -> () -> IO Int
-  opGetNumC (Object _ _ (C'Attrs _ !x _)) _ = readIORef x
+  opGetNumC :: C'Attrs -> () -> IO Int
+  opGetNumC (C'Attrs _ !x _) _ = readIORef x
 
-  opSetNumC :: C'Object -> Int -> IO ()
-  opSetNumC (Object _ _ (C'Attrs _ !x _)) !v = writeIORef x v
+  opSetNumC :: C'Attrs -> Int -> IO ()
+  opSetNumC (C'Attrs _ !x _) !v = writeIORef x v
 
 
 -- application run
@@ -90,14 +88,21 @@ classC = c
 main :: IO ()
 main = do
 
+  -- object construction
   !o <- classC $^ (777, "hahah")
   putStrLn $ unpack $ "obj created for class: " <> className (objClass o)
 
-  rx <- o $. getNumC $ ()
-  putStrLn $ "num c now is: " <> show rx
-
+  -- calling direct methods
+  cx0 <- o $. getNumC $ ()
+  putStrLn $ "num at c now is: " <> show cx0
   o $. setNumC $ 888
+  cx1 <- o $. getNumC $ ()
+  putStrLn $ "num at c then is: " <> show cx1
 
-  nx <- o $. getNumC $ ()
-  putStrLn $ "num c then is: " <> show nx
+  -- calling base methods
+  bx0 <- (o $.. getNumB) ops'C'B attrs'C'B ()
+  putStrLn $ "num at b now is: " <> show bx0
+  (o $.. setNumB) ops'C'B attrs'C'B 999
+  bx1 <- (o $.. getNumB) ops'C'B attrs'C'B ()
+  putStrLn $ "num at b then is: " <> show bx1
 
