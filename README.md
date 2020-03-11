@@ -4,26 +4,33 @@ I never imagined **OO** stylish program can be written in **Haskel**
 in such a way so straight forward!
 
 Constructing object:
+
 ```haskell
 !o <- classC $^ (777, "hahah")
 ```
 
 Calling direct methods:
+
 ```haskell
   cx0 <- o $. getNumC $ ()
   o $. setNumC $ 888
 ```
 
 Calling base methods:
+
 ```haskell
   bx0 <- (o $.. cast'C'as'B) getNumB ()
   (o $.. cast'C'as'B) setNumB 999
 ```
 
-Though the object class definition appears verbose as hand-crafted for now,
+Method arguments have to be **uncurried** as prototyped here, I suppose it's
+the preferable flavor when writing **OO** style code though.
+
+While the object class definition appears verbose as hand-crafted for now,
 I believe **Template Haskell** has much to offer for better syntax sugar.
 
 Base class:
+
 ```haskell
 -- pieces used to assembly object class `B` up
 type B'Ctor'Args = Int
@@ -35,7 +42,7 @@ data B'Ops = B'Ops {
     getNumB :: B'Attrs -> () -> IO Int
     , setNumB :: B'Attrs -> Int  -> IO ()
   }
--- object class `B` assemblied into a concrete value 
+-- object class `B` assemblied into a concrete value
 classB :: Class B'Ctor'Args B'Ops B'Attrs
 classB = c
  where
@@ -55,6 +62,7 @@ classB = c
 ```
 
 Derived class:
+
 ```haskell
 -- pieces used to assembly object class `C` up
 type C'Ctor'Args = (Int, Text)
@@ -68,7 +76,7 @@ data C'Ops = C'Ops {
     , getNumC :: C'Attrs -> () -> IO Int
     , setNumC :: C'Attrs -> Int  -> IO ()
   }
--- object class `C` assemblied into a concrete value 
+-- object class `C` assemblied into a concrete value
 classC :: Class C'Ctor'Args C'Ops C'Attrs
 classC = c
  where
@@ -89,12 +97,14 @@ classC = c
 ```
 
 Caster:
+
 ```haskell
 cast'C'as'B :: (C'Ops -> B'Ops, C'Attrs -> B'Attrs)
 cast'C'as'B = (ops'C'B, attrs'C'B)
 ```
 
 Machinery:
+
 ```haskell
 
 data Class g o a = Class {
