@@ -30,7 +30,6 @@ data B'Ops = B'Ops {
     getNumB :: B'Attrs -> () -> IO Int
     , setNumB :: B'Attrs -> Int  -> IO ()
   }
-
 -- object class `B` assemblied into a concrete value 
 classB :: Class B'Ctor'Args B'Ops B'Attrs
 classB = c
@@ -62,7 +61,6 @@ data C'Ops = C'Ops {
     , getNumC :: C'Attrs -> () -> IO Int
     , setNumC :: C'Attrs -> Int  -> IO ()
   }
-
 -- object class `C` assemblied into a concrete value 
 classC :: Class C'Ctor'Args C'Ops C'Attrs
 classC = c
@@ -82,6 +80,9 @@ classC = c
   opSetNumC :: C'Attrs -> Int -> IO ()
   opSetNumC (C'Attrs _ !x _) !v = writeIORef x v
 
+cast'C'as'B :: (C'Ops -> B'Ops, C'Attrs -> B'Attrs)
+cast'C'as'B = (ops'C'B, attrs'C'B)
+
 
 -- application run
 
@@ -100,9 +101,9 @@ main = do
   putStrLn $ "num at c then is: " <> show cx1
 
   -- calling base methods
-  bx0 <- (o $.. getNumB) ops'C'B attrs'C'B ()
+  bx0 <- (o $.. cast'C'as'B) getNumB ()
   putStrLn $ "num at b now is: " <> show bx0
-  (o $.. setNumB) ops'C'B attrs'C'B 999
-  bx1 <- (o $.. getNumB) ops'C'B attrs'C'B ()
+  (o $.. cast'C'as'B) setNumB 999
+  bx1 <- (o $.. cast'C'as'B) getNumB ()
   putStrLn $ "num at b then is: " <> show bx1
 

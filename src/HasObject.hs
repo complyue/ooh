@@ -55,21 +55,20 @@ callMethod !o !op !args = op (classOps $ objClass o) (objAttrs o) args
 ($.) :: Object g o a -> (o -> a -> p -> IO b) -> (p -> IO b)
 ($.) = callMethod
 
+
 -- | base method invoker
 callBaseMethod
   :: Object g o a
+  -> ((o -> o'), (a -> a'))
   -> (o' -> a' -> p -> IO b)
-  -> (o -> o')
-  -> (a -> a')
   -> p
   -> IO b
-callBaseMethod !o !op !baseOpX !baseAttrX !args =
-  op (baseOpX $ classOps $ objClass o) (baseAttrX $ objAttrs o) args
+callBaseMethod !o (opsX, attrsX) !op !args =
+  op (opsX $ classOps $ objClass o) (attrsX $ objAttrs o) args
 ($..)
   :: Object g o a
+  -> ((o -> o'), (a -> a'))
   -> (o' -> a' -> p -> IO b)
-  -> (o -> o')
-  -> (a -> a')
   -> p
   -> IO b
 ($..) = callBaseMethod
