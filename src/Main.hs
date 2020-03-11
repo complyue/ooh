@@ -1,6 +1,7 @@
 
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE GADTs #-}
 
 module Main where
 
@@ -18,18 +19,32 @@ import           HasObject
 
 -- application lib
 
-classC :: Class
+data C'Ops = C'Ops {
+    getXXX :: (Object C'Ops C'Attrs) -> Args -> IO Value
+    , setXXX :: (Object C'Ops C'Attrs) -> Args -> IO ()
+  }
+
+data C'Attrs = C'Attrs {
+      xxx :: IORef Value
+    , yyy :: IORef Value
+  }
+
+classC :: Class C'Ops C'Attrs
 classC = c
  where
-  !c = mkClass "C" ctorC [("getXXX", getAttr "xxx"), ("getYYY", getAttr "yyy")]
-  ctorC :: Args -> IO Object
-  ctorC !args = Object c <$> newIORef args
-  getAttr :: Key -> Object -> Args -> IO Value
-  getAttr !k !o _ = do
-    d <- readIORef $ objAttrs o
-    case Map.lookup k d of
-      Nothing -> return NilValue
-      Just v  -> return v
+  !c = mkClass "C" ctorC $ C'Ops opGetXXX opSetXXX
+
+  ctorC :: Args -> IO (Object C'Ops C'Attrs)
+  ctorC args = do  -- TODO use args to initialize fields
+    x <- newIORef $ IntValue 777
+    y <- newIORef $ StrValue "hhh"
+    return $ Object c $ C'Attrs x y
+
+  opGetXXX :: (Object C'Ops C'Attrs) -> Args -> IO Value
+  opGetXXX (Object _ (C'Attrs !x _)) !_args = readIORef x
+
+  opSetXXX :: (Object C'Ops C'Attrs) -> Args -> IO ()
+  opSetXXX (Object _ (C'Attrs !x _)) !_args = writeIORef x $ StrValue "888"
 
 
 -- application run
@@ -41,12 +56,11 @@ main = do
     $ Map.fromList [("nnn", IntValue 777), ("xxx", StrValue "bingo")]
   putStrLn $ unpack $ "obj created for class: " <> className (objClass o)
 
-  rx <- callMethod o "getXXX" Map.empty
-  putStrLn $ "method xxx result: " <> show rx
+  rx <- callOp o getXXX Map.empty
+  putStrLn $ "xxx now is: " <> show rx
 
-  ry <- callMethod o "getYYY" Map.empty
-  putStrLn $ "method yyy result: " <> show ry
+  callOp o setXXX Map.empty
 
-  -- destined to fail
-  rz <- callMethod o "getZZZ" Map.empty
-  putStrLn $ "method zzz result: " <> show rz
+  nx <- callOp o getXXX Map.empty
+  putStrLn $ "xxx then is: " <> show nx
+
